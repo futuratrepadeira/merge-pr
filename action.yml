@@ -1,0 +1,13 @@
+name: 'Pull Request Merger'
+description: 'Merges a PR if it contains more than a single commit, otherwise rebases it'
+author: 'Duarte Nunes <duarte@uma.ni'
+inputs:
+  repo-token:
+    description: 'The GITHUB_TOKEN secret'
+    required: true
+runs:
+  using: 'node12'
+  main: 'lib/main.js'
+branding:
+  icon: 'wind'
+  color: 'dark-gray'
