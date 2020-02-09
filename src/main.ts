@@ -2,7 +2,7 @@ import * as core from "@actions/core"
 import { GitHub, context } from "@actions/github"
 import Octokit from "@octokit/rest"
 
-async function doMerge(client: GitHub, pr: Octokit.PullsGetResponse, mergeMethod: "rebase" | "merge"): Promise<void> {
+async function mergePr(client: GitHub, pr: Octokit.PullsGetResponse): Promise<void> {
     if (pr.mergeable_state != "clean") {
         return
     }
@@ -12,31 +12,16 @@ async function doMerge(client: GitHub, pr: Octokit.PullsGetResponse, mergeMethod
         pull_number: pr.number,
     }
     const commits = await client.pulls.listCommits({ ...opts })
-    const authors = new Set<{ name: string; email: string }>()
+    const authors = new Set<string>()
     for (const c of commits.data) {
-        authors.add({ name: c.commit.author.name, email: c.commit.author.email })
-    }
-    let suffixes = ""
-    for (const u of authors) {
-        suffixes += `Authored-by ${u.name} <${u.email}>`
+        authors.add(`Authored-by: ${c.commit.author.name} <${c.commit.author.email}>`)
     }
     await client.pulls.merge({
         ...opts,
-        merge_method: mergeMethod,
+        merge_method: pr.commits == 1 ? "rebase" : "merge",
         commit_title: "merge: " + pr.title,
-        commit_message: `
-            "${pr.body}"
-            
-            ${suffixes}
-            `,
+        commit_message: `"${pr.body}"\n\n${Array.from(authors.values()).join("\n")}`,
     })
-}
-
-function mergePr(client: GitHub, pr: Octokit.PullsGetResponse): Promise<void> {
-    if (pr.commits == 1) {
-        return doMerge(client, pr, "rebase")
-    }
-    return doMerge(client, pr, "merge")
 }
 
 function getPr(client: GitHub): Promise<Octokit.Response<Octokit.PullsGetResponse>> {
