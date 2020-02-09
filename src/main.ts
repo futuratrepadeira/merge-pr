@@ -11,6 +11,19 @@ async function mergePr(client: GitHub, pr: Octokit.PullsGetResponse): Promise<vo
         repo: context.repo.repo,
         pull_number: pr.number,
     }
+
+    const reviews = await client.pulls.listReviews({ ...opts })
+    const approved_reviews = new Set<string>()
+
+    for (const r of reviews) {
+        if (r.state == "APPROVED") {
+            const users = await client.users.getByUsername(r.user.login)
+            for (const u of users) {
+                approved_reviews.add(`Reviewed-by: ${u.name} <${u.email}>`)
+            }
+        }
+    }
+
     const commits = await client.pulls.listCommits({ ...opts })
     const authors = new Set<string>()
     for (const c of commits.data) {
@@ -20,7 +33,9 @@ async function mergePr(client: GitHub, pr: Octokit.PullsGetResponse): Promise<vo
         ...opts,
         merge_method: pr.commits == 1 ? "rebase" : "merge",
         commit_title: "merge: " + pr.title,
-        commit_message: `"${pr.body}"\n\n${Array.from(authors.values()).join("\n")}`,
+        commit_message: `"${pr.body}"\n\n${Array.from(authors.values()).join("\n")}\n${Array.from(
+            approved_reviews.values(),
+        ).join("\n")}`,
     })
 }
 
