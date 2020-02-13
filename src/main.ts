@@ -16,12 +16,25 @@ async function mergePr(client: GitHub, pr: Octokit.PullsGetResponse): Promise<vo
     for (const c of commits.data) {
         authors.add(`Authored-by: ${c.commit.author.name} <${c.commit.author.email}>`)
     }
-    await client.pulls.merge({
-        ...opts,
-        merge_method: pr.commits == 1 ? "rebase" : "merge",
-        commit_title: "merge: " + pr.title,
-        commit_message: `"${pr.body}"\n\n${Array.from(authors.values()).join("\n")}`,
-    })
+    if (commits.data.length == 1) {
+        const msg = commits.data[0].commit.message
+        const divider = msg.indexOf("\n")
+        const title = msg.slice(0, divider)
+        const body = msg.slice(divider)
+        await client.pulls.merge({
+            ...opts,
+            merge_method: "squash",
+            commit_title: title + ` (#${pr.number})`,
+            commit_message: body,
+        })
+    } else {
+        await client.pulls.merge({
+            ...opts,
+            merge_method: "merge",
+            commit_title: "merge: " + pr.title + ` (#${pr.number})`,
+            commit_message: `"${pr.body}"\n\n${Array.from(authors.values()).join("\n")}`,
+        })
+    }
 }
 
 function getPr(client: GitHub): Promise<Octokit.Response<Octokit.PullsGetResponse>> {
@@ -42,7 +55,7 @@ async function run(): Promise<void> {
         const { data } = await getPr(client)
         await mergePr(client, data)
     } catch (error) {
-        core.error(error)
+        core.error(error.message)
         core.setFailed(error.message)
     }
 }
