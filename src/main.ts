@@ -38,13 +38,18 @@ async function mergePr(client: GitHub, pr: Octokit.PullsGetResponse): Promise<vo
 }
 
 function getPr(client: GitHub): Promise<Octokit.Response<Octokit.PullsGetResponse>> {
-    if (!context.payload.pull_request) {
+    let pr: number
+    if (context.payload.pull_request) {
+        pr = context.payload.pull_request.number
+    } else if (context.payload.issue?.number) {
+        pr = context.payload.issue.number
+    } else {
         throw new Error("Missing pull request context")
     }
     return client.pulls.get({
         owner: context.repo.owner,
         repo: context.repo.repo,
-        pull_number: context.payload.pull_request.number,
+        pull_number: pr,
     })
 }
 
