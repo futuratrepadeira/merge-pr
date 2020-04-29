@@ -116,9 +116,10 @@ async function handleCheckUpdate(client: GitHub, eventName: string): Promise<voi
 
 async function handle(client: GitHub): Promise<void> {
     const eventName = process.env["GITHUB_EVENT_NAME"]
+    core.debug(eventName || "")
     if (eventName === "status") {
         await handleStatusUpdate(client)
-    } else if (eventName === "pull_request") {
+    } else if (eventName === "pull_request" || eventName === "pull_request_review") {
         await handlePullRequestUpdate(client)
     } else if (eventName === "check_suite" || eventName === "check_run") {
         await handleCheckUpdate(client, eventName)
