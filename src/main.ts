@@ -1,5 +1,7 @@
 import * as core from "@actions/core"
-import { GitHub, context } from "@actions/github"
+import { context, getOctokit } from "@actions/github"
+
+type GitHub = ReturnType<typeof getOctokit>
 
 async function mergePr(client: GitHub, prNumber: number): Promise<void> {
     const opts = {
@@ -130,7 +132,7 @@ async function handle(client: GitHub): Promise<void> {
 async function run(): Promise<void> {
     try {
         const token = core.getInput("repo-token", { required: true })
-        const client = new GitHub(token)
+        const client = getOctokit(token)
         await handle(client)
     } catch (error) {
         core.error(error.message)
