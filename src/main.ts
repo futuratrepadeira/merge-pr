@@ -9,6 +9,7 @@ async function mergePr(client: GitHub, prNumber: number): Promise<void> {
     }
     const { data: pr } = await client.pulls.get({ ...opts })
     if (pr.mergeable_state != "clean") {
+        core.debug(`mergeable state is not clean: ${pr.mergeable_state}`)
         return
     }
 
