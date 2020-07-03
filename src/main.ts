@@ -9,36 +9,19 @@ async function mergePr(client: GitHub, prNumber: number): Promise<void> {
         repo: context.repo.repo,
         pull_number: prNumber,
     }
-    const { data: pr } = await client.pulls.get({ ...opts })
+    const { data: pr } = await client.pulls.get(opts)
+
     core.debug(`mergeable state is: ${pr.mergeable_state}`)
     if (pr.mergeable_state !== "clean" && pr.mergeable_state !== "unstable") {
         return
     }
 
-    const commits = await client.pulls.listCommits({ ...opts })
-    const authors = new Set<string>()
-    for (const c of commits.data) {
-        authors.add(`Authored-by: ${c.commit.author.name} <${c.commit.author.email}>`)
-    }
-    if (commits.data.length == 1) {
-        const msg = commits.data[0].commit.message
-        const divider = msg.indexOf("\n")
-        const title = msg.slice(0, divider)
-        const body = msg.slice(divider)
-        await client.pulls.merge({
-            ...opts,
-            merge_method: "squash",
-            commit_title: title + ` (#${pr.number})`,
-            commit_message: body,
-        })
-    } else {
-        await client.pulls.merge({
-            ...opts,
-            merge_method: "merge",
-            commit_title: "merge: " + pr.title + ` (#${pr.number})`,
-            commit_message: `"${pr.body}"\n\n${Array.from(authors.values()).join("\n")}`,
-        })
-    }
+    await client.pulls.merge({
+        ...opts,
+        merge_method: "squash",
+        commit_title: `${pr.title} (#${pr.number})`,
+        commit_message: pr.body,
+    })
 }
 
 async function checkPullRequestsForBranches(client: GitHub, branchName: string): Promise<void> {
